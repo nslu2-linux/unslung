@@ -14,6 +14,9 @@ setup-env:
 	echo 'LD_LIBRARY_PATH=' >> setup-env
 	echo 'export PATH LD_LIBRARY_PATH BBPATH' >> setup-env
 	echo 'export LANG=C' >> setup-env
+	echo 'unset LC_CTYPE' >> setup-env
+	echo 'unset CC' >> setup-env
+	echo 'unset CXX' >> setup-env
 	echo 'alias bb=bitbake' >> setup-env
 	echo 'echo Environment set up for Unslung development.' >> setup-env
 
