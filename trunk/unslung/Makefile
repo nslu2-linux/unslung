@@ -1,8 +1,11 @@
 # Makefile for Unslung
 # Licensed under the GPL v2 or later
 
-unslung-firmware: setup-env conf/local.conf
+unslung-firmware: setup-env conf/local.conf downloads/flex-2.5.31.tar.bz2
 	(source setup-env ; bitbake unslung-packages)
+
+downloads/flex-2.5.31.tar.bz2:
+	cd downloads; wget -nc http://nslu.sourceforge.net/downloads/flex-2.5.31.tar.bz2
 
 setup-env:
 	echo 'OEROOT='`pwd` > setup-env
@@ -31,5 +34,8 @@ update-ignore:
 
 unslung-source:
 	tar zcvf unslung-source.tar.gz --exclude=.svn Makefile conf openembedded nslu2-linux
+
+distclean: clobber
+	rm -f setup-env conf/local.conf downloads
 
 # End of Makefile
