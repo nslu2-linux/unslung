@@ -1,0 +1,185 @@
+
+---
+ arch/arm/mach-ixp4xx/ixdp425-setup.c |  145 +++++++++++++++++++++++++++++++++--
+ 1 file changed, 140 insertions(+), 5 deletions(-)
+
+--- linux-ixp4xx.orig/arch/arm/mach-ixp4xx/ixdp425-setup.c	2006-02-22 18:53:29.000000000 +0100
++++ linux-ixp4xx/arch/arm/mach-ixp4xx/ixdp425-setup.c	2006-02-22 18:57:00.000000000 +0100
+@@ -15,7 +15,7 @@
+ #include <linux/tty.h>
+ #include <linux/serial_8250.h>
+ #include <linux/slab.h>
+-
++#include <linux/eeprom.h>
+ #include <asm/types.h>
+ #include <asm/setup.h>
+ #include <asm/memory.h>
+@@ -25,6 +25,14 @@
+ #include <asm/mach/arch.h>
+ #include <asm/mach/flash.h>
+ 
++#ifdef CONFIG_LEDS_CLASS
++#include <linux/leds.h>
++#endif
++
++#ifdef CONFIG_MACLIST
++#include <net/maclist.h>
++#endif
++
+ static struct flash_platform_data ixdp425_flash_data = {
+ 	.map_name	= "cfi_probe",
+ 	.width		= 2,
+@@ -176,22 +184,149 @@ MACHINE_START(AVILA, "Gateworks Avila Ne
+ MACHINE_END
+ #endif
+ 
++#ifdef CONFIG_MACH_LOFT
++#ifdef CONFIG_LEDS_CLASS
++static struct resource loft_led_resources[] = {
++	{
++		.name		= "ready",  /* green led, also J8 pin 7 */
++		.start		= 3,		/* FIXME use #define */
++		.end		= 3,
++		.flags		= IXP4XX_GPIO_LOW,
++	},
++};
++
++static struct platform_device loft_leds = {
++	.name			= "IXP4XX-GPIO-LED",
++	.id			= -1,
++	.num_resources		= ARRAY_SIZE(loft_led_resources),
++	.resource		= loft_led_resources,
++};
++#endif
++
+ /*
+  * Loft is functionally equivalent to Avila except that it has a
+  * different number for the maximum PCI devices.  The MACHINE
+- * structure below is identical to Avila except for the comment.
++ * structure below is derived from the Avila one (and may, in
++ * fact, be useful on Avila in general).
++ *
++ * The loft init registers a notifier on the on-board EEPROM to
++ * detect the MAC addresses.
++ * NOTE: this probably works for all Gateworks Avila boards and
++ * maybe the ixdp425 too.
++ *
++ * When the EEPROM is added the MAC address are read from it.
+  */
+-#ifdef CONFIG_MACH_LOFT
++
++#if defined(CONFIG_SENSORS_EEPROM) && defined(CONFIG_MACLIST)
++static void loft_eeprom_add(int address, int kind, struct kobject *kobj,
++				struct bin_attribute *eeprom_attr) {
++	/* The MACs are the first 12 bytes in the eeprom at address 0x51 */
++	if (address == 0x51) {
++		ssize_t retlen;
++		char data[12];
++
++		/* Two Macs, one at 0, the other at 6, maclist_add will
++		 * complain if the ID is not a valid MAC.
++		 */
++		retlen = eeprom_attr->read(kobj, data, 0, sizeof data);
++		if (retlen >= 6) {
++			u8 mac[6];
++			memcpy(mac, data+0, sizeof mac);
++			printk(KERN_INFO "LOFT MAC[0]: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
++				mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
++			maclist_add(mac);
++		}
++		if (retlen >= 12) {
++			u8 mac[6];
++			memcpy(mac, data+6, sizeof mac);
++			printk(KERN_INFO "LOFT MAC[1]: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
++				mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
++			maclist_add(mac);
++		}
++	}
++}
++
++static struct eeprom_notifier loft_eeprom_notifier = {
++	.add = loft_eeprom_add
++};
++#endif
++
++static void __init loft_init(void)
++{
++	ixdp425_init();
++
++#ifdef CONFIG_LEDS_CLASS
++	/* We don't care if this fails. */
++	(void)platform_device_register(&loft_leds);
++#endif
++	/* The EEPROM has two ethernet MACs embedded in it which we need,
++	 * that is all this notifier does.
++	 */
++#ifdef CONFIG_SENSORS_EEPROM
++	register_eeprom_user(&loft_eeprom_notifier);
++#endif
++}
++
++/*
++ * Loft bootstrap may pass in parameters, if these contain an
++ * ATAG_MEM and it appears valid (not the 16MByte one in the
++ * setup/kernel.c default) we use it, otherwise a 64MByte
++ * setting is forced here, this may be overridden on the
++ * command line.
++ */
++static void __init loft_fixup(struct machine_desc *desc,
++		struct tag *tags, char **cmdline, struct meminfo *mi)
++{
++	/* Put Loft specific known-required-for-certain stuff here, leave
++	 * a trailing space!
++	 */
++	static char loft_command_line[] =
++		"root=/dev/mtdblock2 rw rootfstype=jffs2 init=/linuxrc "
++		"rtc-ds1672.probe=0,0x68 "
++		CONFIG_CMDLINE;
++
++	int memtag = 0;
++
++	/* The Loft typically has one bank of 64MByte memory.
++	 * NOTE: setting nr_banks != 0 causes kernel/setup.c to remove
++	 * the mem tags from the tag list, so if there is an entry
++	 * there don't remove it!
++	 */
++	if (tags->hdr.tag == ATAG_CORE) do {
++		tags = tag_next(tags);
++		printk(KERN_NOTICE "ATAG[0x%x] size %d\n", tags->hdr.tag, tags->hdr.size);
++		if (tags->hdr.tag == ATAG_MEM && tags->hdr.size == tag_size(tag_mem32) &&
++			(tags->u.mem.start != 0 || tags->u.mem.size != (16*1024*1024))) {
++			memtag = 1;
++			printk(KERN_NOTICE " ATAG_MEM base %x, size %dMB\n",
++					tags->u.mem.start,
++					tags->u.mem.size / (1024*1024));
++		}
++	} while (tags->hdr.size);
++
++	if (!memtag) {
++		mi->nr_banks = 1;
++		mi->bank[0].start = 0;
++		mi->bank[0].size = (64*1024*1024);
++		mi->bank[0].node = PHYS_TO_NID(0);
++	}
++
++	/* A command line in the ATAG list will override this one,
++	 * as is intended.
++	 */
++	 strlcpy(*cmdline, loft_command_line, COMMAND_LINE_SIZE);
++}
++
+ MACHINE_START(LOFT, "Giant Shoulder Inc Loft board")
+ 	/* Maintainer: Tom Billman <kernel@giantshoulderinc.com> */
+ 	.phys_ram	= PHYS_OFFSET,
+ 	.phys_io	= IXP4XX_PERIPHERAL_BASE_PHYS,
+ 	.io_pg_offst	= ((IXP4XX_PERIPHERAL_BASE_VIRT) >> 18) & 0xfffc,
++	.fixup          = loft_fixup,
+ 	.map_io		= ixp4xx_map_io,
+ 	.init_irq	= ixp4xx_init_irq,
+ 	.timer		= &ixp4xx_timer,
+ 	.boot_params	= 0x0100,
+-	.init_machine	= ixdp425_init,
++	.init_machine	= loft_init,
+ MACHINE_END
+ #endif
+-
