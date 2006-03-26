@@ -1,0 +1,54 @@
+#!/bin/sh
+# boot from the hard disk partition "$1" (which
+# must be given) using options from the rest of
+# the command line.
+#
+# Use the standard init path (see /etc/init.d/rcS)
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+#
+# Load the helper functions
+. /etc/default/functions
+#
+leds boot system
+#
+if test -n "$1"
+then
+	device="$1"
+	shift
+	echo "boot: rootfs: mount $* $device [$UUID]"
+	#
+	# wait if required
+	test "$sleep" -gt 0 && sleep "$sleep"
+	#
+	# proc is needed for UUID mount
+	mount -t proc proc /proc 
+	# Mount read-write because before exec'ing init
+	# If a UUID is given (in the environment) this
+	# is used in preference to the device, but if
+	# the UUID mount fails a standard device mount
+	# is attempted.
+	if	test -n "$UUID" &&
+		mount "$@" -U "$UUID" /mnt ||
+		mount "$@" "$device" /mnt
+	then
+		# checkmount checks for sh, chroot, init
+		# and /mnt (i.e. /mnt/mnt in this case)
+		if checkmount /mnt
+		then
+			# pivot to /initrd if available, else /mnt
+			cd /
+			if test -d /mnt/initrd
+			then
+				swivel mnt initrd
+			else
+				swivel mnt mnt
+			fi
+			# swivel failed
+		fi
+		# Failure: unmount the partition
+		umount /mnt
+	fi
+fi
+# fallback - use the flash boot
+leds beep -f 1000 -r 2
+exec /boot/flash
