@@ -487,3 +487,7 @@ Added original "netconsole" code as a kernel module
 Fixed problem with password changing from the GUI and automatic mounting of
 drives and flash devices in port 1.
 Remove unnecessary directory /lib/modules/2.4.22-xfs/pcmcia.
+
+6.8:
+
+First beta release.
