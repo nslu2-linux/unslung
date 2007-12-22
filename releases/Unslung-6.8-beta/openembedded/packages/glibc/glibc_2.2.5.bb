@@ -1,5 +1,5 @@
 FILESDIR = "${@os.path.dirname(bb.data.getVar('FILE',d,1))}/glibc-cvs"
-PR = "r5"
+PR = "r6"
 DESCRIPTION = "GNU C Library"
 HOMEPAGE = "http://www.gnu.org/software/libc/libc.html"
 LICENSE = "LGPL"
@@ -73,6 +73,7 @@ SRC_URI = "${GNU_MIRROR}/glibc/glibc-${PV}.tar.gz \
 	   file://errlist-arm.patch;patch=1 \
 	   file://glibc-2.2.5-allow-gcc-3.4-fixup.patch;patch=1 \
 	   file://glibc-2.2.5-allow-gcc-3.4-grp.patch;patch=1 \
+	   file://glibc-2.2.5-allow-gcc-4.x-configure.patch;patch=1 \
 	   file://glibc-2.2.5-alpha-pwrite64.patch;patch=1 \
 	   file://glibc-2.2.5-arm-pwrite64.patch;patch=1 \
 	   file://glibc-2.2.5-crosstest.patch;patch=1 \
@@ -105,6 +106,7 @@ SRC_URI = "${GNU_MIRROR}/glibc/glibc-${PV}.tar.gz \
 	   file://threadparam.patch;patch=1 \
 	   file://initfini-flags.patch;patch=1 \
 	   file://pt-initfini-flags.patch;patch=1 \
+	   file://glibc-2.3.2-allow-solaris.patch;patch=1 \
 	   \
            file://etc/ld.so.conf \
 	   file://generate-supported.mk"
