@@ -2,10 +2,10 @@
 # Licensed under the GPL v2 or later
 
 unslung-distro: setup-env conf/local.conf
-	(source setup-env ; bitbake unslung-image)
+	(. ./setup-env ; bitbake unslung-image)
 
 unslung-firmware: setup-env conf/local.conf
-	(source setup-env ; bitbake unslung-packages)
+	(. ./setup-env ; bitbake unslung-packages)
 
 setup-env:
 	echo 'OEROOT='`pwd` > setup-env
