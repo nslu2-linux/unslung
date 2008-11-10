@@ -1,1 +1,0 @@
-DEPENDS = slugos-image
