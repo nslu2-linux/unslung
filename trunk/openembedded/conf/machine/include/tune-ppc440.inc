@@ -1,2 +1,0 @@
-TARGET_CC_ARCH = "-mcpu=440"
-PACKAGE_ARCH = "ppc440"

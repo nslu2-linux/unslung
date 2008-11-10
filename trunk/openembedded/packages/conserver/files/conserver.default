@@ -1,2 +1,0 @@
-# Set the port (otherwise it needs conserver in /etc/services)
-CONSERVER_ARGS="-p 782"

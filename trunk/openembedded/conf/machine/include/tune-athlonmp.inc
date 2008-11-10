@@ -1,3 +1,0 @@
-TARGET_CC_ARCH = "-march=i686"
-PACKAGE_ARCH = "i686"
-

@@ -1,4 +1,0 @@
-# Global options for arpwatch(8).
-
-# Debian: don't report bogons
-ARGS="-N"
