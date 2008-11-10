@@ -1,2 +1,0 @@
-#!/bin/sh
-exec /usr/bin/gpe-su -c /usr/sbin/gpe-package

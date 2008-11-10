@@ -1,2 +1,0 @@
-# <type> <owner> <group> <mode> <path> <linksource>
-d quagga quagga 0755 /var/run/quagga none
