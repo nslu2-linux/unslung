@@ -41,7 +41,7 @@ inherit kernel
 ARCH = "arm"
 KERNEL_SUFFIX = "nslu2be"
 CMDLINE_CONSOLE ?= "ttyS0,115200"
-CMDLINE_ROOT = "root=/dev/mtdblock4 rootfstype=jffs2 rw init=/linuxrc mem=32M@0x00000000"
+CMDLINE_ROOT = "root=/dev/mtdblock4 rootfstype=jffs2 rw init=/linuxrc"
 CMDLINE = "${CMDLINE_CONSOLE} ${CMDLINE_ROOT}"
 
 do_configure_prepend() {
