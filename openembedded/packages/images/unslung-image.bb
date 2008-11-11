@@ -96,8 +96,9 @@ nslu2_pack_image () {
 	slugimage -p \
 		-b ${STAGING_LIBDIR}/nslu2-binaries/RedBoot \
 		-s ${STAGING_LIBDIR}/nslu2-binaries/SysConf \
+		-L ${STAGING_LOADER_DIR}/apex-nslu2.bin \
 		-k ${DEPLOY_DIR_IMAGE}/zImage-${MACHINE}.bin \
-		-r Ramdisk:1,Flashdisk:${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.jffs2 \
+		-r Flashdisk:${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.jffs2 \
 		-t ${STAGING_LIBDIR}/nslu2-binaries/Trailer \
 		-o ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}-nslu2.bin
 	slugimage -F -p \
