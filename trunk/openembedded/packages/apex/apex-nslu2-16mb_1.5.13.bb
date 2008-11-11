@@ -3,7 +3,7 @@ SECTION = ""
 PRIORITY = "optional"
 HOMEPAGE = "http://wiki.buici.com/twiki/bin/view/Main/ApexBootloader"
 LICENSE = "GPL"
-PR = "r1"
+PR = "r2"
 
 SRC_URI = "ftp://ftp.buici.com/pub/apex/apex-${PV}.tar.gz \
 	   file://defconfig"
@@ -11,7 +11,7 @@ S = ${WORKDIR}/apex-${PV}
 
 CMDLINE_CONSOLE = "console=${@bb.data.getVar("KERNEL_CONSOLE",d,1) or "ttyS0"}"
 
-CMDLINE_ROOT  ?= "root=/dev/mtdblock4 rootfstype=jffs2 rw"
+CMDLINE_ROOT  ?= "root=/dev/mtdblock4 rootfstype=jffs2 init=/linuxrc rw"
 
 CMDLINE_DEBUG ?= ""
 
