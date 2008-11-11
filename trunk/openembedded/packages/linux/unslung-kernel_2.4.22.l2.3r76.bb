@@ -1,7 +1,7 @@
 SECTION = "kernel"
 DESCRIPTION = "Vendor-compatible Linux kernel for the Linksys NSLU2 device"
 LICENSE = "GPL"
-PR = "r21"
+# PR = "r1"
 
 COMPATIBLE_HOST = 'arm.*-linux'
 COMPATIBLE_MACHINE = "nslu2"
@@ -20,6 +20,7 @@ SRC_URI = "${KERNELORG_MIRROR}/pub/linux/kernel/v2.4/linux-2.4.22.tar.bz2 \
 	   file://double_cpdo.patch;patch=1 \
 	   file://linux-kernel-R25_to_R29.patch;patch=1 \
 	   file://linux-kernel-R29_to_R63.patch;patch=1 \
+	   file://linux-kernel-R63_to_R76.patch;patch=1 \
 	   file://flash-is-now-hdd.patch;patch=1 \
 	   file://gl811e.patch;patch=1 \
 	   file://usbnet.patch;patch=1 \
