@@ -1,0 +1,131 @@
+--- linux-2.4.22.12.3r63/drivers/Makefile	2005-08-30 05:06:00.000000000 +0000
++++ linux-2.4.22.12.3r76/drivers/Makefile	2004-09-28 06:05:28.000000000 +0000
+@@ -48,4 +48,9 @@
+ subdir-$(CONFIG_PCF8594C2)	+= i2c/pcf8594c-2
+ 
+ subdir-$(CONFIG_BLUEZ)		+= bluetooth
++
++ifdef CONFIG_ARCH_IXP425
++subdir-$(CONFIG_IXP425_CSR)	+= ixp400
++endif
++
+ include $(TOPDIR)/Rules.make
+--- linux-2.4.22.12.3r63/drivers/ixp400/Makefile	2005-08-30 05:03:11.000000000 +0000
++++ linux-2.4.22.12.3r76/drivers/ixp400/Makefile	2006-07-03 07:27:09.000000000 +0000
+@@ -96,8 +96,8 @@
+ 
+ # A rule to test the IX_XSCALE_SW is set
+ ifndef IX_XSCALE_SW
+-Makefile: force
+-	$(error IX_XSCALE_SW must be set to the absolute path of the xscale_sw directory)
++Makefile: #force
++	#$(error IX_XSCALE_SW must be set to the absolute path of the xscale_sw directory)
+ endif
+ 
+ # 'component_list.mk' defines COMPONENTS as a list of component
+@@ -109,14 +109,14 @@
+ # The reason we use '&&' instead of a pipe to connect the $(MAKE) and
+ # 'tail' commands is that we don't want the 'tail' to execute if the
+ # $(MAKE) fails.
+-component_list.mk : $(IX_XSCALE_SW)/Makefile $(TOPDIR)/.config Makefile
++component_list.mk : #$(IX_XSCALE_SW)/Makefile $(TOPDIR)/.config Makefile
+ 	echo 'COMPONENTS := \' > $@ # ' for syntax highlighting
+-	$(MAKE) -C $(IX_XSCALE_SW) --no-print-directory showmacro MACRO=COMPONENTS IX_BYPASS_DEPS=1\
++#	$(MAKE) -C $(IX_XSCALE_SW) --no-print-directory showmacro MACRO=COMPONENTS IX_BYPASS_DEPS=1\
+ 		> $@.tmp && tail -n 1 < $@.tmp >> $@
+-	echo 'CODELETS_COMPONENTS := \' >> $@ # ' for syntax highlighting
+-	$(MAKE) -C $(IX_XSCALE_SW) --no-print-directory showmacro MACRO=CODELETS_COMPONENTS IX_BYPASS_DEPS=1\
+-		> $@.tmp && tail -n 1 < $@.tmp >> $@
+-	rm $@.tmp
++#	echo 'CODELETS_COMPONENTS := \' >> $@ # ' for syntax highlighting
++#	$(MAKE) -C $(IX_XSCALE_SW) --no-print-directory showmacro MACRO=CODELETS_COMPONENTS IX_BYPASS_DEPS=1\
++#		> $@.tmp && tail -n 1 < $@.tmp >> $@
++#	rm $@.tmp
+ 
+ # These are the module files we can build
+ IXP400_MODULES := ixp400.o $(COMPONENTS:%=ixp400_%.o) $(CODELETS_COMPONENTS:%=ixp400_codelets_%.o)
+--- linux-2.4.22.12.3r63/drivers/usb/storage/maxtor_onetouch.c	2004-09-28 06:05:30.000000000 +0000
++++ linux-2.4.22.12.3r76/drivers/usb/storage/maxtor_onetouch.c	2005-11-09 06:18:46.000000000 +0000
+@@ -48,7 +48,7 @@
+ 
+ /* Maximum number of IRQs we can buffer */
+ #define US_MXO_OT_MAX_IRQ	20
+-
++static int flag=0;
+ /* Extra data structure */
+ struct maxtor_onetouch {
+ 	struct us_data		*us;		/* points back to the us_data structure */
+@@ -290,7 +290,6 @@
+ 	
+ 	US_MXO_OT_DEBUG(US_MXO_OT_DBG_INFO,
+ 			"USB Maxtor OneTouch: mxo_ot_destructor()\n");
+-	
+ 	/* allocation should have worked */
+ 	if (!mxo_ot) {
+ 		US_MXO_OT_DEBUG(US_MXO_OT_DBG_ERROR,
+@@ -336,6 +335,8 @@
+ 	struct us_data *us = (struct us_data*) __us;
+ 	struct maxtor_onetouch *mxo_ot;
+ 	
++	if(flag)
++		return -ENOMEM; 
+ 	mxo_ot = (struct maxtor_onetouch*) kmalloc(sizeof(struct maxtor_onetouch), GFP_KERNEL);
+ 	if (!mxo_ot) {
+ 		printk ("USB Maxtor OneTouch: Out of memory!\n");
+@@ -358,6 +359,7 @@
+ 	if (mxo_ot_allocate_irq(mxo_ot)) {
+ 		US_MXO_OT_DEBUG(US_MXO_OT_DBG_ERROR,
+ 				"USB Maxtor OneTouch: mxo_ot_allocate_irq() failed\n");
++		kfree(mxo_ot);
+ 		return -1;
+ 	}
+ 	
+@@ -366,10 +368,11 @@
+ 	if (p < 0) {
+ 		US_MXO_OT_DEBUG(US_MXO_OT_DBG_ERROR,
+ 				"USB Maxtor OneTouch: Unable to start action thread\n");
++		kfree(mxo_ot);
+ 		return p;
+ 	}
+ 	mxo_ot->pid = p;
+-
++	flag=1;
+ 	/* Wait for the thread to start */
+ 	wait_for_completion(&(mxo_ot->notify));
+ 	
+--- linux-2.4.22.12.3r63/mm/oom_kill.c	2004-09-28 06:05:35.000000000 +0000
++++ linux-2.4.22.12.3r76/mm/oom_kill.c	2006-01-11 06:32:16.000000000 +0000
+@@ -21,6 +21,8 @@
+ #include <linux/swapctl.h>
+ #include <linux/timex.h>
+ 
++#define UPNPD_PROCESS	"upnpd" 
++
+ /* #define DEBUG */
+ 
+ /**
+@@ -125,6 +127,12 @@
+ 	struct task_struct *chosen = NULL;
+ 
+ 	for_each_task(p) {
++		if (p->pid && !memcmp(p->comm,UPNPD_PROCESS,strlen(UPNPD_PROCESS))) {
++			chosen = p;
++			return chosen;
++		}
++	}
++	for_each_task(p) {
+ 		if (p->pid) {
+ 			int points = badness(p);
+ 			if (points > maxpoints) {
+@@ -157,7 +165,10 @@
+ 	if (cap_t(p->cap_effective) & CAP_TO_MASK(CAP_SYS_RAWIO)) {
+ 		force_sig(SIGTERM, p);
+ 	} else {
+-		force_sig(SIGKILL, p);
++	//	if(!memcmp(p->comm,UPNPD_PROCESS,strlen(UPNPD_PROCESS)))
++	//		force_sig(SIGTERM, p);
++	//	else
++			force_sig(SIGKILL, p);
+ 	}
+ }
+ 
